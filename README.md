@@ -1,7 +1,7 @@
 The library implements the queue with a maximum speed of execution.
 
 [![API documentation](https://godoc.org/github.com/claygod/queue?status.svg)](https://godoc.org/github.com/claygod/queue)
-[![Go Report Card](https://goreportcard.com/badge/github.com/claygod/queue)](https://goreportcard.com/report/github.com/claygod/PiHex)
+[![Go Report Card](https://goreportcard.com/badge/github.com/claygod/queue)](https://goreportcard.com/report/github.com/claygod/queue)
 
 The queue can be used both in style LIFO and a FIFO. Also, urgent messages (with high priority) using FIFO can be put in the queue head.
 
