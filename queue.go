@@ -89,7 +89,7 @@ func (q *Queue) PopHead() (Message, bool) {
 	}
 	n, q.db[q.head] = q.db[q.head], Message{}
 	q.head++
-	if q.head == q.tail {
+	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
 		q.clean()
 	}
 	q.hasp = 0
@@ -108,7 +108,7 @@ func (q *Queue) PopTail() (Message, bool) {
 	}
 	q.tail--
 	n, q.db[q.tail] = q.db[q.tail], Message{}
-	if q.head == q.tail {
+	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
 		q.clean()
 	}
 	q.hasp = 0

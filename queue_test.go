@@ -37,14 +37,14 @@ func TestSizeQueue20(t *testing.T) {
 
 func TestClear(t *testing.T) {
 	q := New(10)
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 30; i++ {
 		q.PushTail(Message{id: 1})
 	}
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 30; i++ {
 		q.PopTail()
 	}
 	if q.SizeQueue() != 10 {
-		t.Error("Clear not correct! SizeQueue 10 != ", q.LenQueue())
+		t.Error("Clear not correct! SizeQueue 10 != ", q.SizeQueue())
 	}
 }
 
