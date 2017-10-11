@@ -72,7 +72,7 @@ Operation added to the queue head is more resource-intensive,
 so it is necessary to organize the code in the operation of
 the library so that the addition was mainly in the tail queue.
 
-Note in parallel execution speed is decreased. If desired, you can artificially
+Note: in parallel execution speed is decreased. If desired, you can artificially
 remove the parallelism in the calling code with a code `runtime.GOMAXPROCS(1)`
 
 ```
