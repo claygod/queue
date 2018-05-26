@@ -136,7 +136,7 @@ func (q *Queue) PopHeadList(num int) []interface{} {
 	return out
 }
 
-func (q *Queue) PopAll(num int) []interface{} {
+func (q *Queue) PopAll() []interface{} {
 	q.m.Lock()
 	defer q.m.Unlock()
 	out := q.db[q.head:q.tail]
