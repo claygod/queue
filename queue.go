@@ -32,7 +32,7 @@ type Queue struct {
 
 // New - create new queue.
 // The optional argument: the initial size of the queue.
-func New(args ...int) Queue {
+func New(args ...int) *Queue {
 	var sizeBlock int
 	if len(args) > 0 {
 		sizeBlock = args[0]
@@ -48,7 +48,7 @@ func New(args ...int) Queue {
 		sizeBlock: sizeBlock, // nil,
 	}
 	// q.unlock() // q.hasp = 0
-	return q
+	return &q
 }
 
 // PushTail - Insert element in the tail queue
