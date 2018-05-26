@@ -99,8 +99,8 @@ func TestQueuePushList(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		q.PushTail(i)
 	}
-	lst, ok := q.PopHeadList(3)
-	if !ok {
+	lst := q.PopHeadList(3)
+	if len(lst) != 3 {
 		t.Error("Not received 3 items, although there are 10 in the database.")
 	}
 	if lst[0].(int) != 0 {
@@ -113,10 +113,7 @@ func TestQueuePushList2(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		q.PushTail(i)
 	}
-	lst, ok := q.PopHeadList(13)
-	if !ok {
-		t.Error("Not received 3 items, although there are 10 in the database.")
-	}
+	lst := q.PopHeadList(13)
 	if len(lst) != 10 {
 		t.Error("Amount is incorrect.")
 	}

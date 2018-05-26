@@ -28,6 +28,7 @@ type Queue struct {
 	tail      int
 	sizeQueue int
 	sizeBlock int
+	sizeIn    int
 }
 
 // New - create new queue.
@@ -46,6 +47,7 @@ func New(args ...int) *Queue {
 		tail:      sizeBlock / 2,
 		sizeQueue: sizeBlock,
 		sizeBlock: sizeBlock, // nil,
+		sizeIn:    sizeBlock,
 	}
 	// q.unlock() // q.hasp = 0
 	return &q
@@ -110,7 +112,7 @@ func (q *Queue) PopHead() (interface{}, bool) {
 	return n, true
 }
 
-func (q *Queue) PopHeadList(num int) ([]interface{}, bool) {
+func (q *Queue) PopHeadList(num int) []interface{} {
 	q.m.Lock()
 	defer q.m.Unlock()
 	//if !q.lock() {
@@ -118,7 +120,7 @@ func (q *Queue) PopHeadList(num int) ([]interface{}, bool) {
 	//}
 	if q.tail == q.head {
 		//q.unlock() // q.hasp = 0
-		return make([]interface{}, 0), false
+		return make([]interface{}, 0)
 	}
 	end := q.head + num
 	if end > q.tail {
@@ -131,7 +133,22 @@ func (q *Queue) PopHeadList(num int) ([]interface{}, bool) {
 		q.clean()
 	}
 	// q.unlock() // q.hasp = 0
-	return out, true
+	return out
+}
+
+func (q *Queue) PopAll(num int) []interface{} {
+	q.m.Lock()
+	defer q.m.Unlock()
+	out := q.db[q.head:q.tail]
+
+	q.hasp = 0
+	q.db = make([]interface{}, q.sizeIn)
+	q.head = q.sizeIn / 2
+	q.tail = q.sizeIn / 2
+	q.sizeQueue = q.sizeIn
+	q.sizeBlock = q.sizeIn
+
+	return out
 }
 
 // PopTail - Get the item from the queue tail
