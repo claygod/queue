@@ -17,13 +17,13 @@ import (
 
 func main() {
 	q := New()
-	q.PushTail(Message{id: 1})
-	q.PushTail(Message{id: 2})
+	q.PushTail(1)
+	q.PushTail(2)
 	if m, ok := q.PopHead() {
-		fmt.Print("\n id2 = ",q)
+		fmt.Print("\n result (1) = ",m)
 	}
 	if m, ok := q.PopHead() {
-		fmt.Print("\n id1 = ",q)
+		fmt.Print("\n result (2) = ",m)
 	}
 }
 ```
@@ -33,8 +33,8 @@ func main() {
 ```Go
 	q := New()
 	// in
-	q.PushTail(Message{id: 1})
-	q.PushTail(Message{id: 2})
+	q.PushTail(1)
+	q.PushTail(2)
 	// out
 	m, ok := q.PopTail() // -> 2
 	m, ok := q.PopTail() // -> 1
@@ -45,8 +45,8 @@ func main() {
 ```Go
 	q := New()
 	// in
-	q.PushTail(Message{id: 1})
-	q.PushTail(Message{id: 2})
+	q.PushTail(1)
+	q.PushTail(2)
 	// out
 	m, ok := q.PopHead() // -> 1
 	m, ok := q.PopHead() // -> 2
@@ -57,9 +57,9 @@ func main() {
 ```Go
 	q := New()
 	// in
-	q.PushTail(Message{id: 1})
-	q.PushTail(Message{id: 2})
-	q.PushHead(Message{id: 3}) // immediately in front of the queue
+	q.PushTail(1)
+	q.PushTail(2)
+	q.PushHead(3) // immediately in front of the queue
 	// out
 	m, ok := q.PopHead() // -> 3
 	m, ok := q.PopHead() // -> 1
@@ -76,12 +76,14 @@ Note: in parallel execution speed is decreased. If desired, you can artificially
 remove the parallelism in the calling code with a code `runtime.GOMAXPROCS(1)`
 
 ```
-BenchmarkPushTail-4           	50000000	        31.7 ns/op
-BenchmarkPushTailParallel-4   	10000000	        47.7 ns/op
-BenchmarkPushHeadLimit-4      	50000000	        29.9 ns/op
-BenchmarkPushHead-4           	10000000	      1911.0 ns/op
-BenchmarkPopHead-4            	100000000	        15.2 ns/op
-BenchmarkPopTail-4            	100000000	        15.0 ns/op
+BenchmarkPushTail-8            	50000000	        22.2 ns/op
+BenchmarkPushTailParallel-8    	50000000	        27.4 ns/op
+BenchmarkPushHeadLimit-8       	2000000000	         0.20 ns/op
+BenchmarkPushHead-8            	 1000000	     12939 ns/op
+BenchmarkPopHead-8             	2000000000	         0.01 ns/op
+BenchmarkPopTail-8             	2000000000	         0.01 ns/op
+BenchmarkQueueList-8           	2000000000	         0.03 ns/op
+BenchmarkQueueListParallel-8   	50000000	        31.0 ns/op
 ```
 
 # API
@@ -91,6 +93,7 @@ Methods:
 -  *PushTai*l - insert element in the tail queue
 -  *PushHead* - paste item in the queue head
 -  *PopHead* - get the first element of the queue
+-  *PopHeadList* - get the first X elements of the queue
 -  *PopTail* - get the item from the queue tail
 -  *LenQueue* - the number of elements in the queue
 -  *SizeQueue* - the size reserved for queue

@@ -2,7 +2,7 @@ package queue
 
 // Queue
 // Bench
-// Copyright © 2016 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
+// Copyright © 2016-2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ func BenchmarkPushTail(b *testing.B) {
 	q := New()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		q.PushTail(Message{id: i})
+		q.PushTail(i)
 	}
 }
 
@@ -24,7 +24,7 @@ func BenchmarkPushTailParallel(b *testing.B) {
 	b.StartTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
-			q.PushTail(Message{id: i})
+			q.PushTail(i)
 			i++
 		}
 	})
@@ -36,7 +36,7 @@ func BenchmarkPushHeadLimit(b *testing.B) {
 	q := New(150000)
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		q.PushHead(Message{id: i})
+		q.PushHead(i)
 		if i > limit {
 			break
 		}
@@ -48,18 +48,18 @@ func BenchmarkPushHead(b *testing.B) {
 	q := New()
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		q.PushHead(Message{id: i})
+		q.PushHead(i)
 	}
 }
 
 func BenchmarkPopHead(b *testing.B) {
 	b.StopTimer()
 	q := New()
-	for i := 0; i < b.N; i++ {
-		q.PushTail(Message{id: i})
+	for i := 0; i < 10000000; i++ {
+		q.PushTail(i)
 	}
 	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; i < 1000000; i++ {
 		q.PopHead()
 	}
 }
@@ -67,11 +67,37 @@ func BenchmarkPopHead(b *testing.B) {
 func BenchmarkPopTail(b *testing.B) {
 	b.StopTimer()
 	q := New()
-	for i := 0; i < b.N; i++ {
-		q.PushTail(Message{id: i})
+	for i := 0; i < 10000000; i++ {
+		q.PushTail(i)
 	}
 	b.StartTimer()
-	for i := 0; i < b.N; i++ {
+	for i := 0; i < 1000000; i++ {
 		q.PopTail()
 	}
+}
+
+func BenchmarkQueueList(b *testing.B) {
+	b.StopTimer()
+	q := New()
+	for i := 0; i < 10000000; i++ {
+		q.PushTail(i)
+	}
+	b.StartTimer()
+	for i := 0; i < 1000000; i++ {
+		q.PopHeadList(10)
+	}
+}
+
+func BenchmarkQueueListParallel(b *testing.B) {
+	b.StopTimer()
+	q := New()
+	for i := 0; i < 10000000; i++ {
+		q.PushTail(i)
+	}
+	b.StartTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			q.PopHeadList(2)
+		}
+	})
 }

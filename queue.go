@@ -2,14 +2,16 @@ package queue
 
 // Queue
 // API
-// Copyright © 2016 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
+// Copyright © 2016-2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
 	"runtime"
+	"sync"
 	"sync/atomic"
 )
 
 const sizeBlockDefault int = 1000
+const sizeQueueMax int = 1000000
 const trialLimit int = 20000000
 
 // Message - default element for queue
@@ -19,8 +21,9 @@ type Message struct {
 
 // Queue - main struct.
 type Queue struct {
+	m         sync.Mutex
 	hasp      int32
-	db        []Message
+	db        []interface{}
 	head      int
 	tail      int
 	sizeQueue int
@@ -37,35 +40,44 @@ func New(args ...int) Queue {
 		sizeBlock = sizeBlockDefault
 	}
 	q := Queue{
-		0, make([]Message, sizeBlock), sizeBlock / 2, sizeBlock / 2, sizeBlock, sizeBlock, // nil,
+		hasp:      0,
+		db:        make([]interface{}, sizeBlock),
+		head:      sizeBlock / 2,
+		tail:      sizeBlock / 2,
+		sizeQueue: sizeBlock,
+		sizeBlock: sizeBlock, // nil,
 	}
-	q.hasp = 0
+	// q.unlock() // q.hasp = 0
 	return q
 }
 
 // PushTail - Insert element in the tail queue
-func (q *Queue) PushTail(n Message) bool {
-	if !q.lock() {
+func (q *Queue) PushTail(n interface{}) bool {
+	q.m.Lock()
+	defer q.m.Unlock()
+	if q.sizeQueue >= sizeQueueMax { //  || !q.lock()
 		return false
 	}
 	q.db[q.tail] = n
 	q.tail++
 	if q.tail >= q.sizeQueue {
-		q.db = append(q.db, make([]Message, q.sizeBlock)...)
+		q.db = append(q.db, make([]interface{}, q.sizeBlock)...)
 		q.sizeQueue += q.sizeBlock
 	}
-	q.hasp = 0
+	//q.unlock() // q.hasp = 0
 	return true
 }
 
 // PushHead - Paste item in the queue head
-func (q *Queue) PushHead(n Message) bool {
-	if !q.lock() {
+func (q *Queue) PushHead(n interface{}) bool {
+	q.m.Lock()
+	defer q.m.Unlock()
+	if q.sizeQueue >= sizeQueueMax { //  || !q.lock()
 		return false
 	}
 	q.head--
 	if q.head == 0 {
-		newDb := make([]Message, q.sizeQueue+q.sizeBlock)
+		newDb := make([]interface{}, q.sizeQueue+q.sizeBlock)
 		copy(newDb[q.sizeBlock:], q.db)
 		q.db = newDb
 		q.head += q.sizeBlock
@@ -73,67 +85,99 @@ func (q *Queue) PushHead(n Message) bool {
 		q.sizeQueue = q.sizeQueue + q.sizeBlock
 	}
 	q.db[q.head] = n
-	q.hasp = 0
+	//q.unlock() // q.hasp = 0
 	return true
 }
 
 // PopHead - Get the first element of the queue
-func (q *Queue) PopHead() (Message, bool) {
-	var n Message
-	if !q.lock() {
-		return n, false
-	}
+func (q *Queue) PopHead() (interface{}, bool) {
+	q.m.Lock()
+	defer q.m.Unlock()
+	var n interface{}
+	//if !q.lock() {
+	//	return n, false
+	//}
 	if q.tail == q.head {
-		q.hasp = 0
+		//q.unlock() // q.hasp = 0
 		return n, false
 	}
-	n, q.db[q.head] = q.db[q.head], Message{}
+	n, q.db[q.head] = q.db[q.head], nil
 	q.head++
 	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
 		q.clean()
 	}
-	q.hasp = 0
+	//q.unlock() // q.hasp = 0
 	return n, true
 }
 
-// PopTail - Get the item from the queue tail
-func (q *Queue) PopTail() (Message, bool) {
-	var n Message
-	if !q.lock() {
-		return n, false
+func (q *Queue) PopHeadList(num int) ([]interface{}, bool) {
+	q.m.Lock()
+	defer q.m.Unlock()
+	//if !q.lock() {
+	//	return make([]interface{}, 0), false
+	//}
+	if q.tail == q.head {
+		//q.unlock() // q.hasp = 0
+		return make([]interface{}, 0), false
 	}
-	if q.head == q.tail {
-		q.hasp = 0
-		return n, false
+	end := q.head + num
+	if end > q.tail {
+		end = q.tail
 	}
-	q.tail--
-	n, q.db[q.tail] = q.db[q.tail], Message{}
+	out := make([]interface{}, end-q.head)
+	copy(out, q.db[q.head:end])
+	q.head = end
 	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
 		q.clean()
 	}
-	q.hasp = 0
+	// q.unlock() // q.hasp = 0
+	return out, true
+}
+
+// PopTail - Get the item from the queue tail
+func (q *Queue) PopTail() (interface{}, bool) {
+	var n interface{}
+	//if !q.lock() {
+	//	return n, false
+	//}
+	q.m.Lock()
+	defer q.m.Unlock()
+	if q.head == q.tail {
+		//q.unlock() // q.hasp = 0
+		return n, false
+	}
+	q.tail--
+	n, q.db[q.tail] = q.db[q.tail], nil
+	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
+		q.clean()
+	}
+	//q.unlock() // q.hasp = 0
 	return n, true
 }
 
 // LenQueue - The number of elements in the queue
 func (q *Queue) LenQueue() int {
-	q.lock()
+	q.m.Lock()
+	defer q.m.Unlock()
+	//q.lock()
 	ln := q.tail - q.head
-	q.hasp = 0
+	//q.unlock() // q.hasp = 0
 	return ln
 }
 
 // SizeQueue - The size reserved for queue
 func (q *Queue) SizeQueue() int {
-	q.lock()
+	q.m.Lock()
+	defer q.m.Unlock()
+	//q.lock()
 	ln := q.sizeQueue
-	q.hasp = 0
+	//q.unlock() // q.hasp = 0
 	return ln
 }
 
 // clean - Resetting the queue (not thread-safe, is called only after the lock)
 func (q *Queue) clean() {
-	q.db = make([]Message, q.sizeBlock)
+	q.db = make([]interface{}, q.sizeBlock)
 	q.head = q.sizeBlock / 2
 	q.tail = q.sizeBlock / 2
 	q.sizeQueue = q.sizeBlock
@@ -151,4 +195,8 @@ func (q *Queue) lock() bool {
 		runtime.Gosched()
 	}
 	return true
+}
+
+func (q *Queue) unlock() {
+	q.hasp = 0
 }
