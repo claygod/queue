@@ -5,6 +5,7 @@ package queue
 // Copyright © 2016-2018 Eduard Sesigin. All rights reserved. Contacts: <claygod@yandex.ru>
 
 import (
+	// "fmt"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -24,6 +25,7 @@ type Queue struct {
 	m         sync.Mutex
 	hasp      int32
 	db        []interface{}
+	dbReserve []interface{}
 	head      int
 	tail      int
 	sizeQueue int
@@ -43,6 +45,7 @@ func New(args ...int) *Queue {
 	q := Queue{
 		hasp:      0,
 		db:        make([]interface{}, sizeBlock),
+		dbReserve: make([]interface{}, sizeBlock),
 		head:      sizeBlock / 2,
 		tail:      sizeBlock / 2,
 		sizeQueue: sizeBlock,
@@ -55,9 +58,12 @@ func New(args ...int) *Queue {
 
 // PushTail - Insert element in the tail queue
 func (q *Queue) PushTail(n interface{}) bool {
+	// q.lock()
 	q.m.Lock()
-	defer q.m.Unlock()
+	// defer q.m.Unlock()
 	if q.sizeQueue >= sizeQueueMax { //  || !q.lock()
+		q.m.Unlock()
+		//q.unlock()
 		return false
 	}
 	q.db[q.tail] = n
@@ -67,14 +73,16 @@ func (q *Queue) PushTail(n interface{}) bool {
 		q.sizeQueue += q.sizeBlock
 	}
 	//q.unlock() // q.hasp = 0
+	q.m.Unlock()
 	return true
 }
 
 // PushHead - Paste item in the queue head
 func (q *Queue) PushHead(n interface{}) bool {
 	q.m.Lock()
-	defer q.m.Unlock()
+	//defer q.m.Unlock()
 	if q.sizeQueue >= sizeQueueMax { //  || !q.lock()
+		q.m.Unlock()
 		return false
 	}
 	q.head--
@@ -88,6 +96,7 @@ func (q *Queue) PushHead(n interface{}) bool {
 	}
 	q.db[q.head] = n
 	//q.unlock() // q.hasp = 0
+	q.m.Unlock()
 	return true
 }
 
@@ -105,7 +114,7 @@ func (q *Queue) PopHead() (interface{}, bool) {
 	}
 	n, q.db[q.head] = q.db[q.head], nil
 	q.head++
-	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
+	if q.head == q.tail { //  && q.sizeQueue >= q.sizeBlock*3
 		q.clean()
 	}
 	//q.unlock() // q.hasp = 0
@@ -113,13 +122,17 @@ func (q *Queue) PopHead() (interface{}, bool) {
 }
 
 func (q *Queue) PopHeadList(num int) []interface{} {
+	//q.lock()
 	q.m.Lock()
-	defer q.m.Unlock()
+
+	// defer q.m.Unlock()
 	//if !q.lock() {
 	//	return make([]interface{}, 0), false
 	//}
 	if q.tail == q.head {
 		//q.unlock() // q.hasp = 0
+		q.m.Unlock()
+		//q.unlock()
 		return make([]interface{}, 0)
 	}
 	end := q.head + num
@@ -129,25 +142,28 @@ func (q *Queue) PopHeadList(num int) []interface{} {
 	out := make([]interface{}, end-q.head)
 	copy(out, q.db[q.head:end])
 	q.head = end
-	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
+	if q.head == q.tail { //  && q.sizeQueue >= q.sizeBlock*3
 		q.clean()
 	}
 	// q.unlock() // q.hasp = 0
+	q.m.Unlock()
+	//q.unlock()
 	return out
 }
 
 func (q *Queue) PopAll() []interface{} {
+	ndb := make([]interface{}, q.sizeIn)
 	q.m.Lock()
-	defer q.m.Unlock()
+	//defer q.m.Unlock()
 	out := q.db[q.head:q.tail]
 
 	q.hasp = 0
-	q.db = make([]interface{}, q.sizeIn)
+	q.db = ndb
 	q.head = q.sizeIn / 2
 	q.tail = q.sizeIn / 2
 	q.sizeQueue = q.sizeIn
 	q.sizeBlock = q.sizeIn
-
+	q.m.Unlock()
 	return out
 }
 
@@ -165,7 +181,7 @@ func (q *Queue) PopTail() (interface{}, bool) {
 	}
 	q.tail--
 	n, q.db[q.tail] = q.db[q.tail], nil
-	if q.head == q.tail && q.sizeQueue >= q.sizeBlock*3 {
+	if q.head == q.tail { // && q.sizeQueue >= q.sizeBlock*3
 		q.clean()
 	}
 	//q.unlock() // q.hasp = 0
@@ -192,28 +208,62 @@ func (q *Queue) SizeQueue() int {
 	return ln
 }
 
-// clean - Resetting the queue (not thread-safe, is called only after the lock)
-func (q *Queue) clean() {
+func (q *Queue) cleanAlternative() {
+	// fmt.Print("\r\n------------ CLEAN!!\r\n")
+	if q.dbReserve == nil {
+		q.db = make([]interface{}, q.sizeBlock)
+	} else {
+		q.db = q.dbReserve // make([]interface{}, q.sizeBlock)
+	}
+
+	q.head = q.sizeBlock / 2
+	q.tail = q.sizeBlock / 2
+	q.sizeQueue = q.sizeBlock
+	q.dbReserve = nil
+	go q.genDbReserve()
+}
+
+// cleanAndReplace - Resetting the queue (not thread-safe, is called only after the lock)
+func (q *Queue) cleanAndReplace() {
 	q.db = make([]interface{}, q.sizeBlock)
 	q.head = q.sizeBlock / 2
 	q.tail = q.sizeBlock / 2
 	q.sizeQueue = q.sizeBlock
 }
 
+func (q *Queue) clean() {
+	if q.sizeQueue >= q.sizeBlock*3 {
+		q.db = make([]interface{}, q.sizeBlock)
+		q.head = q.sizeBlock / 2
+		q.tail = q.sizeBlock / 2
+		q.sizeQueue = q.sizeBlock
+	} else {
+		q.head = q.sizeQueue / 2
+		q.tail = q.sizeQueue / 2
+	}
+
+}
+
+func (q *Queue) genDbReserve() {
+	q.dbReserve = make([]interface{}, q.sizeBlock)
+
+}
+
 // lock - block queue
 func (q *Queue) lock() bool {
-	for i := trialLimit; i > 0; i-- {
+	for { // i := trialLimit; i > 0; i--
 		if q.hasp == 0 && atomic.CompareAndSwapInt32(&q.hasp, 0, 1) {
 			break
 		}
-		if i == 0 {
-			return false
-		}
+		//if i == 0 {
+		//	return false
+		//}
 		runtime.Gosched()
 	}
 	return true
 }
 
 func (q *Queue) unlock() {
-	q.hasp = 0
+	atomic.StoreInt32(&q.hasp, 0)
+	// q.hasp = 0
 }
