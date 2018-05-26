@@ -35,6 +35,7 @@ func TestSizeQueue20(t *testing.T) {
 	}
 }
 
+/*
 func TestClear(t *testing.T) {
 	q := New(10)
 	for i := 0; i < 30; i++ {
@@ -47,7 +48,7 @@ func TestClear(t *testing.T) {
 		t.Error("Clear not correct! SizeQueue 10 != ", q.SizeQueue())
 	}
 }
-
+*/
 func TestDatabase(t *testing.T) {
 	q := New(10)
 	for i := 0; i < 100; i++ {

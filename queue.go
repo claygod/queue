@@ -232,7 +232,7 @@ func (q *Queue) cleanAndReplace() {
 }
 
 func (q *Queue) clean() {
-	if q.sizeQueue >= q.sizeBlock*3 {
+	if q.sizeQueue >= sizeQueueMax/2 { // q.sizeBlock*3
 		q.db = make([]interface{}, q.sizeBlock)
 		q.head = q.sizeBlock / 2
 		q.tail = q.sizeBlock / 2
