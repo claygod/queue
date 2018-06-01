@@ -12,12 +12,12 @@ import (
 )
 
 const sizeBlockDefault int = 1000
-const sizeQueueMax int = 1000000
+const sizeQueueMax int = 100000
 const trialLimit int = 20000000
 
 // Queue - main struct.
 type Queue struct {
-	m         sync.Mutex
+	m         *sync.Mutex
 	hasp      int32
 	db        []interface{}
 	dbReserve []interface{}
@@ -38,6 +38,7 @@ func New(args ...int) *Queue {
 		sizeBlock = sizeBlockDefault
 	}
 	q := Queue{
+		m:         &sync.Mutex{},
 		hasp:      0,
 		db:        make([]interface{}, sizeBlock),
 		dbReserve: make([]interface{}, sizeBlock),
@@ -55,9 +56,9 @@ func New(args ...int) *Queue {
 func (q *Queue) PushTail(n interface{}) bool {
 	// q.lock()
 	q.m.Lock()
-	// defer q.m.Unlock()
+	defer q.m.Unlock()
 	if q.sizeQueue >= sizeQueueMax { //  || !q.lock()
-		q.m.Unlock()
+		//q.m.Unlock()
 		//q.unlock()
 		return false
 	}
@@ -68,16 +69,16 @@ func (q *Queue) PushTail(n interface{}) bool {
 		q.sizeQueue += q.sizeBlock
 	}
 	//q.unlock() // q.hasp = 0
-	q.m.Unlock()
+	//q.m.Unlock()
 	return true
 }
 
 // PushHead - Paste item in the queue head
 func (q *Queue) PushHead(n interface{}) bool {
 	q.m.Lock()
-	//defer q.m.Unlock()
+	defer q.m.Unlock()
 	if q.sizeQueue >= sizeQueueMax { //  || !q.lock()
-		q.m.Unlock()
+		//q.m.Unlock()
 		return false
 	}
 	q.head--
@@ -91,7 +92,7 @@ func (q *Queue) PushHead(n interface{}) bool {
 	}
 	q.db[q.head] = n
 	//q.unlock() // q.hasp = 0
-	q.m.Unlock()
+	//q.m.Unlock()
 	return true
 }
 
@@ -119,14 +120,13 @@ func (q *Queue) PopHead() (interface{}, bool) {
 func (q *Queue) PopHeadList(num int) []interface{} {
 	//q.lock()
 	q.m.Lock()
-
-	// defer q.m.Unlock()
+	defer q.m.Unlock()
 	//if !q.lock() {
 	//	return make([]interface{}, 0), false
 	//}
 	if q.tail == q.head {
 		//q.unlock() // q.hasp = 0
-		q.m.Unlock()
+		//q.m.Unlock()
 		//q.unlock()
 		return make([]interface{}, 0)
 	}
@@ -141,7 +141,7 @@ func (q *Queue) PopHeadList(num int) []interface{} {
 		q.clean()
 	}
 	// q.unlock() // q.hasp = 0
-	q.m.Unlock()
+	//q.m.Unlock()
 	//q.unlock()
 	return out
 }
@@ -149,7 +149,7 @@ func (q *Queue) PopHeadList(num int) []interface{} {
 func (q *Queue) PopAll() []interface{} {
 	ndb := make([]interface{}, q.sizeIn)
 	q.m.Lock()
-	//defer q.m.Unlock()
+	defer q.m.Unlock()
 	out := q.db[q.head:q.tail]
 
 	q.hasp = 0
@@ -158,7 +158,7 @@ func (q *Queue) PopAll() []interface{} {
 	q.tail = q.sizeIn / 2
 	q.sizeQueue = q.sizeIn
 	q.sizeBlock = q.sizeIn
-	q.m.Unlock()
+	//q.m.Unlock()
 	return out
 }
 
