@@ -15,11 +15,6 @@ const sizeBlockDefault int = 1000
 const sizeQueueMax int = 1000000
 const trialLimit int = 20000000
 
-// Message - default element for queue
-type Message struct {
-	id int
-}
-
 // Queue - main struct.
 type Queue struct {
 	m         sync.Mutex
