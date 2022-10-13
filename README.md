@@ -100,5 +100,7 @@ Methods:
 -  *clean* - resetting the queue (not thread-safe, is called only after the lock)
 -  *lock* - block queue
 
+# Copyright
 
+Copyright © 2018-2022 Eduard Sesigin. All rights reserved. Contacts: claygod@yandex.ru
 
